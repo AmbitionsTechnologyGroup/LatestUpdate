@@ -22,14 +22,15 @@ Function Get-UpdateCumulative {
     [regex] $rxB = "$Build.(\d+)"
     $updateList = New-Object -TypeName System.Collections.ArrayList
     ForEach ($item in $UpdateFeed.feed.entry) {
-        If ($item.title -match $rxB) {
+        If ($item.title.'#text' -match $rxB) {
             Write-Verbose -Message "$($MyInvocation.MyCommand): matched item [$($item.title)]"
-            $BuildVersion = [regex]::Match($item.title, $rxB).Value
+            $BuildVersion = [regex]::Match($item.title.'#text', $rxB).Value
             $PSObject = [PSCustomObject] @{
-                Title   = $item.title
+                Title   = $item.title.'#text'
                 ID      = $item.id
                 Build   = $BuildVersion
                 Updated = $item.updated
+                Link = $item.link.href
             }
             $updateList.Add($PSObject) | Out-Null
         }
@@ -45,14 +46,14 @@ Function Get-UpdateCumulative {
                 Build    = $update.Build.Split(".")[0]
                 Revision = [int]($update.Build.Split(".")[1])
                 Updated  = ([DateTime]::Parse($update.updated))
+                Link = $update.Link
             }
             $sortedUpdateList.Add($PSObject) | Out-Null
         }
         If ($Previous.IsPresent) {
             Write-Verbose -Message "$($MyInvocation.MyCommand): selecting previous update"
             $latestUpdate = $sortedUpdateList | Sort-Object -Property Revision -Descending | Select-Object -First 2 | Select-Object -Last 1
-        }
-        Else {
+        } Else {
             $latestUpdate = $sortedUpdateList | Sort-Object -Property Revision -Descending | Select-Object -First 1
         }
         Write-Verbose -Message "$($MyInvocation.MyCommand): selected item [$($latestUpdate.title)]"
